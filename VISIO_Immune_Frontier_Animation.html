@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VISIO — The Immune Frontier (Animated Walkthrough)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#06101C; color:#e0e0e0;
+    font-family:'Segoe UI', Arial, sans-serif;
+    overflow-x:hidden; min-height:100vh;
+  }
+  .wrap { display:flex; flex-direction:column; align-items:center; padding:14px 8px 24px; gap:10px; }
+  .title-bar { text-align:center; }
+  .title-bar h1 { font-size:16px; color:#00B4D8; letter-spacing:2.5px; font-weight:600; }
+  .title-bar p { font-size:10px; color:#5a7a9a; margin-top:3px; letter-spacing:1px; }
+
+  .stage {
+    position:relative; border:1px solid #1a3a5c;
+    border-radius:8px; overflow:hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,180,216,0.05);
+  }
+  canvas { display:block; }
+
+  /* Narrative caption (bottom overlay) */
+  .caption {
+    position:absolute; left:0; right:0; bottom:0;
+    padding:18px 24px 22px;
+    background: linear-gradient(180deg, rgba(6,16,28,0) 0%, rgba(6,16,28,0.85) 50%, rgba(6,16,28,0.95) 100%);
+    color:#fff; pointer-events:none;
+  }
+  .caption .scene-tag {
+    font-size:10px; color:#00B4D8; letter-spacing:3px;
+    opacity:0; transition:opacity 0.6s;
+    text-transform:uppercase; margin-bottom:6px; font-weight:600;
+  }
+  .caption .scene-title {
+    font-size:18px; color:#fff; font-weight:300;
+    opacity:0; transition:opacity 0.6s 0.15s;
+    margin-bottom:4px; letter-spacing:0.5px;
+  }
+  .caption .scene-sub {
+    font-size:12px; color:#a8c0d9; font-weight:300;
+    opacity:0; transition:opacity 0.6s 0.3s;
+    max-width:700px; line-height:1.5;
+  }
+  .caption.show .scene-tag,
+  .caption.show .scene-title,
+  .caption.show .scene-sub { opacity:1; }
+
+  /* Title card overlay */
+  .title-card {
+    position:absolute; inset:0; background:rgba(6,16,28,0.92);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; opacity:1; transition:opacity 0.8s; pointer-events:none; z-index:5;
+  }
+  .title-card.hide { opacity:0; }
+  .title-card .big {
+    font-size:32px; color:#00B4D8; letter-spacing:4px; font-weight:300;
+  }
+  .title-card .small {
+    font-size:12px; color:#5a7a9a; letter-spacing:2px;
+  }
+  .title-card .tag {
+    margin-top:14px; padding:5px 14px; border:1px solid #1a3a5c;
+    border-radius:2px; font-size:10px; color:#00B4D8; letter-spacing:2px;
+  }
+
+  /* End card */
+  .end-card {
+    position:absolute; inset:0; background:rgba(6,16,28,0.92);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:8px; opacity:0; transition:opacity 0.8s; pointer-events:none; z-index:5;
+  }
+  .end-card.show { opacity:1; pointer-events:auto; }
+  .end-card .big { font-size:26px; color:#5DCAA5; letter-spacing:3px; font-weight:300; }
+  .end-card .small { font-size:12px; color:#a8c0d9; max-width:500px; text-align:center; line-height:1.5; margin-top:6px; }
+  .end-card .replay-btn {
+    margin-top:18px; padding:10px 24px;
+    background:transparent; border:1px solid #00B4D8;
+    color:#00B4D8; letter-spacing:2px; font-size:11px;
+    cursor:pointer; transition:all 0.25s;
+  }
+  .end-card .replay-btn:hover { background:#00B4D8; color:#06101C; }
+
+  /* HUD panels */
+  .hud-row {
+    width:100%; max-width:800px; display:grid;
+    grid-template-columns:1fr 1fr; gap:8px;
+  }
+  .panel {
+    background:rgba(13,27,42,0.85); border:1px solid #1a3a5c;
+    border-radius:5px; padding:10px 14px;
+  }
+  .panel h3 {
+    font-size:9px; color:#00B4D8; letter-spacing:2px;
+    text-transform:uppercase; margin-bottom:8px; font-weight:600;
+  }
+  .stat-grid { display:flex; justify-content:space-between; gap:8px; }
+  .stat-col { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .stat {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:11px;
+  }
+  .stat-label { color:#6b8aad; }
+  .stat-value { font-weight:600; font-size:13px; transition:color 0.3s; }
+
+  .healing {
+    width:100%; max-width:800px;
+    background:rgba(13,27,42,0.85); border:1px solid #1a3a5c;
+    border-radius:5px; padding:10px 14px;
+  }
+  .healing h3 {
+    font-size:9px; color:#00B4D8; letter-spacing:2px;
+    text-transform:uppercase; margin-bottom:6px; font-weight:600;
+  }
+  .bar-track {
+    width:100%; height:16px; background:#0a1824; border-radius:8px;
+    overflow:hidden; position:relative; border:1px solid #1a3a5c;
+  }
+  .bar-fill {
+    height:100%; background:linear-gradient(90deg, #2D6A4F, #5DCAA5, #8BD4A8);
+    border-radius:8px; transition:width 0.6s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 0 12px rgba(93,202,165,0.4);
+  }
+  .bar-text {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:600; color:#fff; letter-spacing:1px;
+  }
+
+  /* Progress timeline */
+  .timeline {
+    width:100%; max-width:800px;
+    background:rgba(13,27,42,0.85); border:1px solid #1a3a5c;
+    border-radius:5px; padding:10px 14px;
+  }
+  .timeline-track {
+    display:flex; gap:2px; height:18px; align-items:center; position:relative;
+  }
+  .timeline-seg {
+    flex:1; height:4px; background:#1a2a3a; border-radius:2px;
+    position:relative; overflow:hidden; transition:all 0.3s;
+  }
+  .timeline-seg.active { height:8px; background:#1a3a5c; }
+  .timeline-seg.done { background:#2D6A4F; }
+  .timeline-seg .seg-fill {
+    position:absolute; left:0; top:0; bottom:0; width:0%;
+    background:linear-gradient(90deg, #00B4D8, #5DCAA5);
+    transition:width 0.1s linear;
+  }
+  .timeline-labels {
+    display:flex; gap:2px; margin-top:5px; font-size:8px; color:#5a7a9a;
+    letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .timeline-label { flex:1; text-align:center; transition:color 0.3s; }
+  .timeline-label.active { color:#00B4D8; font-weight:600; }
+
+  /* Event feed */
+  .feed {
+    width:100%; max-width:800px;
+    background:rgba(13,27,42,0.85); border:1px solid #1a3a5c;
+    border-radius:5px; padding:8px 12px;
+    max-height:70px; overflow:hidden;
+    font-size:10px;
+    position:relative;
+  }
+  .feed h3 {
+    font-size:9px; color:#00B4D8; letter-spacing:2px;
+    text-transform:uppercase; margin-bottom:4px; font-weight:600;
+  }
+  .feed-content {
+    display:flex; flex-direction:column-reverse;
+    max-height:44px; overflow:hidden;
+  }
+  .feed-item {
+    padding:2px 0; color:#6b8aad;
+    animation: slideIn 0.4s;
+  }
+  .feed-item.phago { color:#E9C46A; }
+  .feed-item.bcell { color:#85B7EB; }
+  .feed-item.tcell { color:#AFA9EC; }
+  .feed-item.danger { color:#F09595; }
+  .feed-item.success { color:#5DCAA5; }
+  @keyframes slideIn {
+    from { opacity:0; transform:translateY(6px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* Legend */
+  .legend {
+    width:100%; max-width:800px;
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+    font-size:9px; color:#6b8aad; letter-spacing:0.5px;
+  }
+  .legend-item { display:flex; align-items:center; gap:4px; }
+  .legend-dot { width:8px; height:8px; border-radius:50%; }
+
+  /* Pulse on cell counts */
+  @keyframes pulse {
+    0% { transform:scale(1); }
+    50% { transform:scale(1.15); }
+    100% { transform:scale(1); }
+  }
+  .pulse { animation:pulse 0.4s; display:inline-block; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="title-bar">
+    <h1>THE IMMUNE FRONTIER — ANIMATED WALKTHROUGH</h1>
+    <p>VISIO Deep Space · 16 × 9 m Floor · Collaborative Immune Response Simulation</p>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="floor"></canvas>
+
+    <!-- Title card -->
+    <div class="title-card" id="titleCard">
+      <div class="big">THE IMMUNE FRONTIER</div>
+      <div class="small">A COLLABORATIVE IMMUNE RESPONSE SIMULATION</div>
+      <div class="tag">VISIO · TIIMA MUSEUM · OULU</div>
+    </div>
+
+    <!-- Narrative caption -->
+    <div class="caption" id="caption">
+      <div class="scene-tag" id="sceneTag"></div>
+      <div class="scene-title" id="sceneTitle"></div>
+      <div class="scene-sub" id="sceneSub"></div>
+    </div>
+
+    <!-- End card -->
+    <div class="end-card" id="endCard">
+      <div class="big">INFECTION RESOLVED</div>
+      <div class="small">The collaborative immune response has cleared the threat and restored tissue integrity. Students have embodied how phagocytes, B-lymphocytes, and T-lymphocytes work together to protect the body.</div>
+      <button class="replay-btn" id="replayBtn">↺ REPLAY</button>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="timeline-track" id="timelineTrack"></div>
+    <div class="timeline-labels" id="timelineLabels"></div>
+  </div>
+
+  <!-- Healing bar -->
+  <div class="healing">
+    <h3>Tissue Healing Progress</h3>
+    <div class="bar-track">
+      <div class="bar-fill" id="healBar" style="width:0%"></div>
+      <div class="bar-text" id="healText">0%</div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud-row">
+    <div class="panel">
+      <h3>Active Immune Cells</h3>
+      <div class="stat-grid">
+        <div class="stat-col">
+          <div class="stat"><span class="stat-label">Phagocytes</span><span class="stat-value" id="sPhago" style="color:#E9C46A">0</span></div>
+          <div class="stat"><span class="stat-label">B-Lymph</span><span class="stat-value" id="sBcell" style="color:#85B7EB">0</span></div>
+          <div class="stat"><span class="stat-label">T-Lymph</span><span class="stat-value" id="sTcell" style="color:#AFA9EC">0</span></div>
+        </div>
+        <div class="stat-col">
+          <div class="stat"><span class="stat-label">Engulfed</span><span class="stat-value" id="sEngulf" style="color:#E9C46A">0</span></div>
+          <div class="stat"><span class="stat-label">Antibodies</span><span class="stat-value" id="sAntib" style="color:#85B7EB">0</span></div>
+          <div class="stat"><span class="stat-label">Destroyed</span><span class="stat-value" id="sKill" style="color:#AFA9EC">0</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Threat Status</h3>
+      <div class="stat-grid">
+        <div class="stat-col">
+          <div class="stat"><span class="stat-label">Pathogens</span><span class="stat-value" id="sPath" style="color:#F09595">15</span></div>
+          <div class="stat"><span class="stat-label">Toxins</span><span class="stat-value" id="sTox" style="color:#AFA9EC">8</span></div>
+          <div class="stat"><span class="stat-label">Infected</span><span class="stat-value" id="sInf" style="color:#F09595">6</span></div>
+        </div>
+        <div class="stat-col">
+          <div class="stat"><span class="stat-label">Scene</span><span class="stat-value" id="sScene" style="color:#00B4D8; font-size:11px">—</span></div>
+          <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="sTime" style="color:#6b8aad; font-size:11px">0s</span></div>
+          <div class="stat"><span class="stat-label">Students</span><span class="stat-value" id="sStudents" style="color:#00B4D8">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event feed -->
+  <div class="feed">
+    <h3>Floor Events</h3>
+    <div class="feed-content" id="feed"></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#D85A30"></div>Phagocyte (3 students)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4A90D9"></div>B-Lymphocyte</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8B7BD8"></div>T-Lymphocyte</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4CAF50"></div>Pathogen</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7E57C2"></div>Toxin</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E57373;border:1px solid #4CAF50"></div>Infected cell</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E91E63;width:6px;height:9px;border-radius:2px"></div>Antibody</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// VISIO — THE IMMUNE FRONTIER · Animated Walkthrough
+// ============================================================
+const canvas = document.getElementById('floor');
+const ctx = canvas.getContext('2d');
+const W_M = 16, H_M = 9;
+let SCALE, CW, CH;
+
+function resize() {
+  const maxW = Math.min(800, window.innerWidth - 20);
+  SCALE = maxW / W_M;
+  CW = W_M * SCALE; CH = H_M * SCALE;
+  canvas.width = CW; canvas.height = CH;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const FENS = [2.5, 5.0, 7.5, 10.0, 12.5, 14.5];
+
+// ============================================================
+// STATE
+// ============================================================
+let tick = 0;
+let sceneIdx = -1;
+let sceneTick = 0;
+let stats = { engulfed:0, antibodies:0, kills:0, totalThreats:0 };
+let phagocytes = [], bcells = [], tcells = [];
+let pathogens = [], toxins = [], infectedCells = [], healthyCells = [];
+let rbcs = [], platelets = [], antibodies = [], particles = [];
+let studentCount = 0;
+let finished = false;
+let speedMul = 1.7; // cinematic speed
+
+// ============================================================
+// SCENES — cinematic script
+// ============================================================
+// tick is in frames @60fps; each second ~60 ticks
+const SCENES = [
+  { tag:'Scene 01', title:'The Tissue is Infected',
+    sub:'Pathogens proliferate and toxins diffuse. Six tissue cells are infected. Without an immune response, damage will spread.',
+    start:60, end:360, onStart:()=>{} },
+
+  { tag:'Scene 02', title:'Phagocytes Deploy',
+    sub:'Clusters of three students form a phagocyte. They enter the tissue through fenestrations in the capillary wall and hunt pathogens.',
+    start:360, end:780,
+    onStart:()=>{
+      schedule(380, ()=>spawnPhagocyte(4.5, 0.9));
+      schedule(420, ()=>spawnPhagocyte(9.5, 0.9));
+      schedule(480, ()=>spawnPhagocyte(13.0, 0.9));
+      schedule(560, ()=>spawnPhagocyte(6.5, 8.1));
+      schedule(640, ()=>spawnPhagocyte(11.5, 8.1));
+    }},
+
+  { tag:'Scene 03', title:'Engulfment & Regeneration',
+    sub:'Each phagocyte engulfs up to five pathogens, then dies and regenerates from the bone marrow pool. Students experience cellular sacrifice and renewal.',
+    start:780, end:1200, onStart:()=>{} },
+
+  { tag:'Scene 04', title:'B-Lymphocytes Activate',
+    sub:'Students stationed in the capillaries hold position on Antigen Signal Nodes. Their B-lymphocytes release antibodies that home onto pathogens and neutralise toxins.',
+    start:1200, end:1680,
+    onStart:()=>{
+      schedule(1220, ()=>spawnBcell(3.5, 0.9));
+      schedule(1260, ()=>spawnBcell(8.0, 0.9));
+      schedule(1300, ()=>spawnBcell(12.5, 0.9));
+      schedule(1360, ()=>spawnBcell(5.5, 8.1));
+      schedule(1400, ()=>spawnBcell(10.5, 8.1));
+    }},
+
+  { tag:'Scene 05', title:'T-Lymphocytes Eliminate',
+    sub:'T-cells cross the capillary wall and dock with infected cells. After a 3-second positional hold, the infected cell is destroyed — and the hidden pathogen released.',
+    start:1680, end:2280,
+    onStart:()=>{
+      schedule(1700, ()=>spawnTcell(4.0, 4.0));
+      schedule(1760, ()=>spawnTcell(8.0, 5.0));
+      schedule(1820, ()=>spawnTcell(12.0, 3.8));
+      schedule(1920, ()=>spawnTcell(6.5, 5.5));
+    }},
+
+  { tag:'Scene 06', title:'Coordinated Response',
+    sub:'All three cell types work in concert. The healing bar climbs as threats fall. The simulation ends early once healing crosses 90%.',
+    start:2280, end:3000,
+    onStart:()=>{
+      schedule(2320, ()=>spawnPhagocyte(2.5, 8.1));
+      schedule(2380, ()=>spawnTcell(14.0, 4.5));
+    }},
+
+  { tag:'Scene 07', title:'Tissue Restored',
+    sub:'Healing achieved through collaborative action. The floor returns to homeostasis.',
+    start:3000, end:3360, onStart:()=>{} },
+];
+
+const SCHEDULED = [];
+function schedule(atTick, fn) { SCHEDULED.push({ t:atTick, fn, done:false }); }
+
+function spawnPhagocyte(x, y) {
+  phagocytes.push({
+    x, y, tx:x, ty:y, engulfed:0, alive:true, inTissue:false,
+    shape: Array.from({length:8}, (_,i)=>({ a:i*Math.PI/4, r:0.4 + Math.random()*0.15 })),
+    spawnAnim:1.0,
+    students: 3
+  });
+  studentCount += 3;
+  logEvent('Phagocyte formed — 3 students clustered', 'phago');
+}
+
+function spawnBcell(x, y) {
+  bcells.push({ x, y, cooldown: 60 + Math.random()*60, spawnAnim:1.0 });
+  studentCount += 1;
+  logEvent('B-Lymphocyte at Antigen Signal Node', 'bcell');
+}
+
+function spawnTcell(x, y) {
+  tcells.push({ x, y, tx:x, ty:y, inTissue: y > 2.2 && y < 6.8, killing:null, killTimer:0, spawnAnim:1.0 });
+  studentCount += 1;
+  logEvent('T-Lymphocyte deployed', 'tcell');
+}
+
+// ============================================================
+// INIT WORLD
+// ============================================================
+function init() {
+  pathogens = [];
+  for (let i=0;i<15;i++)
+    pathogens.push({ x:1+Math.random()*14, y:2.5+Math.random()*3.8,
+      vx:(Math.random()-0.5)*0.02, vy:(Math.random()-0.5)*0.02, hp:1 });
+  toxins = [];
+  for (let i=0;i<8;i++)
+    toxins.push({ x:1+Math.random()*14, y:2.5+Math.random()*3.8, a:Math.random()*Math.PI*2 });
+  infectedCells = [];
+  for (let i=0;i<6;i++)
+    infectedCells.push({ x:1.5+Math.random()*13, y:2.8+Math.random()*3.2, r:0.25 });
+  healthyCells = [];
+  for (let i=0;i<20;i++)
+    healthyCells.push({ x:0.5+Math.random()*15, y:2.4+Math.random()*4.0, r:0.22 });
+  rbcs = [];
+  for (let i=0;i<30;i++) {
+    const inTop = Math.random() > 0.5;
+    rbcs.push({ x:Math.random()*16, y: inTop ? 7.4 + Math.random()*1.4 : 0.2 + Math.random()*1.4, vx:0.015 });
+  }
+  platelets = [];
+  for (let i=0;i<16;i++) {
+    const inTop = Math.random() > 0.5;
+    platelets.push({ x:Math.random()*16, y: inTop ? 7.4 + Math.random()*1.4 : 0.2 + Math.random()*1.4, vx:0.012 });
+  }
+  stats.totalThreats = pathogens.length + toxins.length + infectedCells.length;
+  phagocytes = []; bcells = []; tcells = []; antibodies = []; particles = [];
+  stats.engulfed = 0; stats.antibodies = 0; stats.kills = 0;
+  SCHEDULED.length = 0;
+  sceneIdx = -1;
+  sceneTick = 0;
+  tick = 0;
+  studentCount = 0;
+  finished = false;
+  // Hide end card, show title card briefly
+  document.getElementById('endCard').classList.remove('show');
+  document.getElementById('titleCard').classList.remove('hide');
+  setTimeout(()=>document.getElementById('titleCard').classList.add('hide'), 2200);
+  buildTimelineUI();
+}
+
+// ============================================================
+// TIMELINE UI
+// ============================================================
+function buildTimelineUI() {
+  const track = document.getElementById('timelineTrack');
+  const labels = document.getElementById('timelineLabels');
+  track.innerHTML = '';
+  labels.innerHTML = '';
+  SCENES.forEach((s, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'timeline-seg';
+    seg.id = `seg-${i}`;
+    const fill = document.createElement('div');
+    fill.className = 'seg-fill';
+    fill.id = `segfill-${i}`;
+    seg.appendChild(fill);
+    track.appendChild(seg);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'timeline-label';
+    lbl.id = `lbl-${i}`;
+    lbl.textContent = `0${i+1}`;
+    labels.appendChild(lbl);
+  });
+}
+
+function updateTimelineUI() {
+  SCENES.forEach((s, i) => {
+    const seg = document.getElementById(`seg-${i}`);
+    const fill = document.getElementById(`segfill-${i}`);
+    const lbl = document.getElementById(`lbl-${i}`);
+    if (i < sceneIdx) {
+      seg.classList.add('done'); seg.classList.remove('active');
+      fill.style.width = '100%';
+      lbl.classList.remove('active');
+    } else if (i === sceneIdx) {
+      seg.classList.add('active'); seg.classList.remove('done');
+      const prog = Math.max(0, Math.min(1, (tick - s.start) / (s.end - s.start)));
+      fill.style.width = (prog * 100) + '%';
+      lbl.classList.add('active');
+    } else {
+      seg.classList.remove('active', 'done');
+      fill.style.width = '0%';
+      lbl.classList.remove('active');
+    }
+  });
+}
+
+// ============================================================
+// CAPTIONS
+// ============================================================
+function setCaption(scene) {
+  const cap = document.getElementById('caption');
+  cap.classList.remove('show');
+  setTimeout(()=>{
+    document.getElementById('sceneTag').textContent = scene.tag;
+    document.getElementById('sceneTitle').textContent = scene.title;
+    document.getElementById('sceneSub').textContent = scene.sub;
+    cap.classList.add('show');
+  }, 300);
+  document.getElementById('sScene').textContent = scene.tag.replace('Scene ', 'S');
+}
+
+function logEvent(msg, cls) {
+  const feed = document.getElementById('feed');
+  const d = document.createElement('div');
+  d.className = 'feed-item ' + (cls||'');
+  d.textContent = `[${Math.floor(tick/60)}s] ${msg}`;
+  feed.prepend(d);
+  while (feed.children.length > 6) feed.removeChild(feed.lastChild);
+}
+
+function dist(a, b) { return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2); }
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update() {
+  tick += speedMul;
+  const t = Math.floor(tick);
+  document.getElementById('sTime').textContent = Math.floor(tick/60) + 's';
+
+  // Scene progression
+  for (let i = 0; i < SCENES.length; i++) {
+    if (t >= SCENES[i].start && sceneIdx < i) {
+      sceneIdx = i;
+      setCaption(SCENES[i]);
+      SCENES[i].onStart();
+    }
+  }
+
+  // Scheduled events
+  SCHEDULED.forEach(s => {
+    if (!s.done && t >= s.t) { s.fn(); s.done = true; }
+  });
+
+  // RBCs / platelets drift
+  rbcs.forEach(r => { r.x += r.vx * speedMul; if (r.x > 16.5) r.x = -0.5; });
+  platelets.forEach(p => { p.x += p.vx * speedMul; if (p.x > 16.5) p.x = -0.5; });
+
+  // Pathogen drift
+  pathogens.forEach(p => {
+    p.x += p.vx * speedMul; p.y += p.vy * speedMul;
+    if (p.x < 0.5 || p.x > 15.5) p.vx *= -1;
+    if (p.y < 2.4 || p.y > 6.6) p.vy *= -1;
+  });
+
+  // Toxin wobble
+  toxins.forEach(tx => { tx.a += 0.01 * speedMul; });
+
+  // Phagocyte AI
+  phagocytes.forEach(ph => {
+    if (!ph.alive) return;
+    ph.spawnAnim = Math.max(0, ph.spawnAnim - 0.03 * speedMul);
+    if (!ph.inTissue) {
+      const fy = ph.y < 4.5 ? 2.0 : 7.0;
+      let nearFen = FENS[0], nearDist = 999;
+      FENS.forEach(fx => { const d = Math.abs(ph.x - fx); if (d < nearDist) { nearDist = d; nearFen = fx; } });
+      ph.tx = nearFen; ph.ty = fy;
+      const dx = ph.tx - ph.x, dy = ph.ty - ph.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d > 0.1) { ph.x += dx/d * 0.025 * speedMul; ph.y += dy/d * 0.025 * speedMul; }
+      if (Math.abs(ph.y - fy) < 0.3) {
+        ph.inTissue = true; ph.y = ph.y < 4.5 ? 2.5 : 6.5;
+        logEvent('Phagocyte entered tissue', 'phago');
+      }
+    } else {
+      let nearest = null, nd = 999;
+      pathogens.forEach(p => { const d = dist(ph, p); if (d < nd) { nd = d; nearest = p; } });
+      if (nearest && nd > 0.6) {
+        const dx = nearest.x - ph.x, dy = nearest.y - ph.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        ph.x += dx/d * 0.022 * speedMul; ph.y += dy/d * 0.022 * speedMul;
+      } else if (nearest && nd <= 0.6) {
+        pathogens.splice(pathogens.indexOf(nearest), 1);
+        ph.engulfed++;
+        stats.engulfed++;
+        logEvent(`Pathogen engulfed (${ph.engulfed}/5)`, 'phago');
+        particles.push({ x:nearest.x, y:nearest.y, life:30, color:'#E9C46A' });
+        if (ph.engulfed >= 5) {
+          ph.alive = false;
+          logEvent('Phagocyte depleted — regenerating', 'phago');
+          particles.push({ x:ph.x, y:ph.y, life:60, color:'#D85A30' });
+          setTimeout(() => {
+            const idx = phagocytes.indexOf(ph);
+            if (idx > -1 && !finished) {
+              phagocytes[idx] = {
+                x:1.2, y:0.9, tx:1.2, ty:0.9, engulfed:0, alive:true, inTissue:false,
+                shape: Array.from({length:8}, (_,i)=>({ a:i*Math.PI/4, r:0.4+Math.random()*0.15 })),
+                spawnAnim:1.0, students:3
+              };
+              logEvent('New phagocyte from bone marrow', 'success');
+            }
+          }, 2200);
+        }
+      }
+      ph.y = Math.max(2.4, Math.min(6.6, ph.y));
+      ph.x = Math.max(0.5, Math.min(15.5, ph.x));
+    }
+    ph.shape.forEach(s => { s.r += (Math.random()-0.5)*0.01; s.r = Math.max(0.3, Math.min(0.55, s.r)); });
+  });
+
+  // B-cells: release antibodies
+  bcells.forEach(bc => {
+    bc.spawnAnim = Math.max(0, bc.spawnAnim - 0.03 * speedMul);
+    bc.cooldown -= speedMul;
+    if (bc.cooldown <= 0) {
+      bc.cooldown = 150 + Math.random()*90;
+      for (let i=0;i<3;i++) {
+        const angle = -Math.PI/2 + (Math.random()-0.5) * Math.PI;
+        const toTissue = bc.y < 4.5 ? 1 : -1;
+        antibodies.push({
+          x:bc.x, y:bc.y,
+          vx: Math.cos(angle)*0.03,
+          vy: toTissue * Math.abs(Math.sin(angle))*0.03 + toTissue*0.02,
+          life:400, target:null
+        });
+      }
+      stats.antibodies += 3;
+      logEvent('Antibodies released', 'bcell');
+    }
+  });
+
+  // Antibody behavior
+  antibodies.forEach(ab => {
+    ab.life -= speedMul;
+    let nearest = null, nd = 999;
+    [...pathogens, ...toxins].forEach(t => {
+      const d = dist(ab, t);
+      if (d < nd && d < 3) { nd = d; nearest = t; }
+    });
+    if (nearest && nd < 3) {
+      const dx = nearest.x - ab.x, dy = nearest.y - ab.y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      ab.vx += dx/d * 0.004 * speedMul; ab.vy += dy/d * 0.004 * speedMul;
+    }
+    ab.x += ab.vx * speedMul; ab.y += ab.vy * speedMul;
+
+    pathogens.forEach((p, i) => {
+      if (dist(ab, p) < 0.3) {
+        p.hp -= 0.5; ab.life = 0;
+        if (p.hp <= 0) {
+          pathogens.splice(i, 1);
+          stats.engulfed++;
+          particles.push({ x:p.x, y:p.y, life:25, color:'#E91E63' });
+          logEvent('Antibody destroyed pathogen', 'bcell');
+        }
+      }
+    });
+    toxins.forEach((tx, i) => {
+      if (dist(ab, tx) < 0.3) {
+        toxins.splice(i, 1); ab.life = 0;
+        particles.push({ x:tx.x, y:tx.y, life:25, color:'#CE93D8' });
+        logEvent('Toxin neutralised', 'bcell');
+      }
+    });
+  });
+  antibodies = antibodies.filter(a => a.life > 0 && a.x > -1 && a.x < 17 && a.y > -1 && a.y < 10);
+
+  // T-cells
+  tcells.forEach(tc => {
+    tc.spawnAnim = Math.max(0, tc.spawnAnim - 0.03 * speedMul);
+    if (!tc.inTissue) {
+      const fy = tc.y < 4.5 ? 2.5 : 6.5;
+      const dy = fy - tc.y;
+      if (Math.abs(dy) > 0.2) tc.y += Math.sign(dy) * 0.03 * speedMul;
+      else { tc.inTissue = true; logEvent('T-cell crossed capillary wall', 'tcell'); }
+    } else if (tc.killing) {
+      tc.killTimer += speedMul;
+      if (tc.killTimer > 100) {
+        const idx = infectedCells.indexOf(tc.killing);
+        if (idx > -1) {
+          pathogens.push({
+            x:tc.killing.x + (Math.random()-0.5)*0.3,
+            y:tc.killing.y + (Math.random()-0.5)*0.3,
+            vx:(Math.random()-0.5)*0.02, vy:(Math.random()-0.5)*0.02, hp:1
+          });
+          infectedCells.splice(idx, 1);
+          stats.kills++;
+          particles.push({ x:tc.killing.x, y:tc.killing.y, life:40, color:'#AFA9EC' });
+          logEvent('Infected cell destroyed', 'tcell');
+        }
+        tc.killing = null; tc.killTimer = 0;
+      }
+    } else {
+      let nearest = null, nd = 999;
+      infectedCells.forEach(ic => { const d = dist(tc, ic); if (d < nd) { nd = d; nearest = ic; } });
+      if (nearest && nd > 0.4) {
+        const dx = nearest.x - tc.x, dy = nearest.y - tc.y;
+        const d = Math.sqrt(dx*dx+dy*dy);
+        tc.x += dx/d * 0.02 * speedMul; tc.y += dy/d * 0.02 * speedMul;
+      } else if (nearest && nd <= 0.4) {
+        tc.killing = nearest; tc.killTimer = 0;
+        logEvent('T-cell docking...', 'tcell');
+      }
+      tc.y = Math.max(2.4, Math.min(6.6, tc.y));
+      tc.x = Math.max(0.5, Math.min(15.5, tc.x));
+    }
+  });
+
+  // Particles decay
+  particles.forEach(p => p.life -= speedMul);
+  particles = particles.filter(p => p.life > 0);
+
+  // Update stats HUD
+  updateHUD();
+  updateTimelineUI();
+
+  // Victory state
+  const remaining = pathogens.length + toxins.length + infectedCells.length;
+  const eliminated = stats.totalThreats - remaining;
+  const pct = stats.totalThreats > 0 ? Math.max(0, Math.min(100, Math.round(eliminated / stats.totalThreats * 100))) : 0;
+
+  if (!finished && (pct >= 95 || tick > 3360)) {
+    finished = true;
+    logEvent('✦ INFECTION RESOLVED ✦', 'success');
+    setTimeout(()=>{
+      document.getElementById('endCard').classList.add('show');
+    }, 1200);
+  }
+}
+
+function updateHUD() {
+  const alive = phagocytes.filter(p => p.alive).length;
+  setStat('sPhago', alive);
+  setStat('sBcell', bcells.length);
+  setStat('sTcell', tcells.length);
+  setStat('sPath', pathogens.length);
+  setStat('sTox', toxins.length);
+  setStat('sInf', infectedCells.length);
+  setStat('sEngulf', stats.engulfed);
+  setStat('sAntib', stats.antibodies);
+  setStat('sKill', stats.kills);
+  setStat('sStudents', studentCount);
+
+  const remaining = pathogens.length + toxins.length + infectedCells.length;
+  const eliminated = stats.totalThreats - remaining;
+  const pct = stats.totalThreats > 0 ? Math.max(0, Math.min(100, Math.round(eliminated / stats.totalThreats * 100))) : 0;
+  document.getElementById('healBar').style.width = pct + '%';
+  document.getElementById('healText').textContent = pct + '%';
+
+  const pathEl = document.getElementById('sPath');
+  pathEl.style.color = pathogens.length > 20 ? '#E24B4A' : pathogens.length > 10 ? '#E9C46A' : '#5DCAA5';
+}
+
+const lastStat = {};
+function setStat(id, val) {
+  const el = document.getElementById(id);
+  if (lastStat[id] !== val) {
+    el.textContent = val;
+    el.classList.remove('pulse');
+    void el.offsetWidth;
+    el.classList.add('pulse');
+    lastStat[id] = val;
+  }
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+function m2px(m) { return m * SCALE; }
+
+function draw() {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Background tissue
+  ctx.fillStyle = '#2a1810';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Tissue zone gradient
+  const tg = ctx.createLinearGradient(0, m2px(2.2), 0, m2px(6.8));
+  tg.addColorStop(0, '#3d2218');
+  tg.addColorStop(0.5, '#452619');
+  tg.addColorStop(1, '#3d2218');
+  ctx.fillStyle = tg;
+  ctx.fillRect(0, m2px(2.2), CW, m2px(4.6));
+
+  // Fibre texture (deterministic-ish for performance)
+  ctx.strokeStyle = 'rgba(180,120,80,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 28; i++) {
+    const seed = (i * 137.5 + tick * 0.02) % 100;
+    ctx.beginPath();
+    ctx.moveTo((seed*CW)/100, m2px(2.2) + (i*13 % m2px(4.6)));
+    ctx.lineTo((seed*CW)/100 + 40, m2px(2.2) + ((i*13+20) % m2px(4.6)));
+    ctx.stroke();
+  }
+
+  // Capillaries
+  ctx.fillStyle = '#5c1515';
+  ctx.fillRect(0, 0, CW, m2px(1.8));
+  ctx.fillRect(0, m2px(7.2), CW, m2px(1.8));
+
+  const cg1 = ctx.createLinearGradient(0, 0, 0, m2px(1.8));
+  cg1.addColorStop(0, 'rgba(120,20,20,0.3)');
+  cg1.addColorStop(0.5, 'rgba(180,40,40,0.15)');
+  cg1.addColorStop(1, 'rgba(120,20,20,0.3)');
+  ctx.fillStyle = cg1;
+  ctx.fillRect(0, 0, CW, m2px(1.8));
+  ctx.fillRect(0, m2px(7.2), CW, m2px(1.8));
+
+  // Capillary walls
+  ctx.fillStyle = '#8B6914';
+  ctx.fillRect(0, m2px(1.8), CW, m2px(0.4));
+  ctx.fillRect(0, m2px(6.8), CW, m2px(0.4));
+
+  ctx.strokeStyle = 'rgba(200,170,80,0.3)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 16; x += 0.8) {
+    ctx.beginPath(); ctx.moveTo(m2px(x), m2px(1.8)); ctx.lineTo(m2px(x), m2px(2.2)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(m2px(x), m2px(6.8)); ctx.lineTo(m2px(x), m2px(7.2)); ctx.stroke();
+  }
+
+  // Fenestrations
+  const fenPulse = 0.7 + 0.3 * Math.sin(tick * 0.05);
+  FENS.forEach(fx => {
+    ctx.fillStyle = `rgba(233,196,106,${0.15 + 0.1 * fenPulse})`;
+    ctx.fillRect(m2px(fx - 0.3), m2px(1.8), m2px(0.6), m2px(0.4));
+    ctx.fillRect(m2px(fx - 0.3), m2px(6.8), m2px(0.6), m2px(0.4));
+    ctx.fillStyle = `rgba(233,196,106,${0.08 + 0.05 * fenPulse})`;
+    ctx.fillRect(m2px(fx - 0.4), m2px(1.75), m2px(0.8), m2px(0.5));
+    ctx.fillRect(m2px(fx - 0.4), m2px(6.75), m2px(0.8), m2px(0.5));
+  });
+
+  // Bone marrow pool
+  ctx.fillStyle = 'rgba(180,140,60,0.18)';
+  ctx.fillRect(0, 0, m2px(2.5), m2px(1.8));
+  ctx.strokeStyle = 'rgba(180,140,60,0.4)';
+  ctx.setLineDash([4, 3]);
+  ctx.strokeRect(1, 1, m2px(2.5)-2, m2px(1.8)-2);
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(180,140,60,0.55)';
+  ctx.font = `${Math.max(8, SCALE * 0.22)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText('BONE MARROW', m2px(1.25), m2px(0.95));
+
+  // RBCs
+  rbcs.forEach(r => {
+    ctx.fillStyle = 'rgba(180,30,30,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(m2px(r.x), m2px(r.y), m2px(0.15), m2px(0.08), 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(220,60,60,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(m2px(r.x), m2px(r.y), m2px(0.06), m2px(0.03), 0, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Platelets
+  platelets.forEach(p => {
+    ctx.fillStyle = 'rgba(230,210,140,0.35)';
+    ctx.beginPath();
+    ctx.arc(m2px(p.x), m2px(p.y), m2px(0.05), 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Healthy cells
+  healthyCells.forEach(hc => {
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(m2px(hc.x), m2px(hc.y), m2px(hc.r), 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.arc(m2px(hc.x), m2px(hc.y), m2px(0.08), 0, Math.PI*2); ctx.fill();
+  });
+
+  // Infected cells with pulsating infection glow
+  const infPulse = 0.6 + 0.4 * Math.sin(tick * 0.06);
+  infectedCells.forEach(ic => {
+    ctx.strokeStyle = 'rgba(255,100,100,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(m2px(ic.x), m2px(ic.y), m2px(ic.r), 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = `rgba(76,175,80,${0.1 + 0.08 * infPulse})`;
+    ctx.fill();
+    ctx.fillStyle = `rgba(76,175,80,${0.2 + 0.15 * infPulse})`;
+    ctx.beginPath(); ctx.arc(m2px(ic.x), m2px(ic.y), m2px(0.12), 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(76,175,80,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(m2px(ic.x + 0.05), m2px(ic.y - 0.03), m2px(0.06), m2px(0.025), 0.3, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Pathogens
+  pathogens.forEach(p => {
+    ctx.save();
+    ctx.translate(m2px(p.x), m2px(p.y));
+    ctx.rotate(Math.atan2(p.vy, p.vx));
+    ctx.fillStyle = '#4CAF50';
+    ctx.shadowColor = '#4CAF50'; ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, m2px(0.18), m2px(0.07), 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(0, m2px(-0.02), m2px(0.1), m2px(0.02), 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Toxins
+  toxins.forEach(t => {
+    ctx.save();
+    ctx.translate(m2px(t.x), m2px(t.y));
+    ctx.rotate(t.a);
+    ctx.fillStyle = '#7E57C2';
+    ctx.shadowColor = '#7E57C2'; ctx.shadowBlur = 3;
+    ctx.beginPath();
+    const s = m2px(0.1);
+    ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  });
+
+  // Antibodies (Y-shaped)
+  antibodies.forEach(ab => {
+    ctx.save();
+    ctx.translate(m2px(ab.x), m2px(ab.y));
+    ctx.strokeStyle = '#E91E63';
+    ctx.shadowColor = '#E91E63'; ctx.shadowBlur = 3;
+    ctx.lineWidth = 1.5;
+    const s = m2px(0.06);
+    ctx.beginPath();
+    ctx.moveTo(0, s*1.5); ctx.lineTo(0, 0);
+    ctx.moveTo(0, 0); ctx.lineTo(-s, -s*1.2);
+    ctx.moveTo(0, 0); ctx.lineTo(s, -s*1.2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  });
+
+  // Phagocytes — with 3 student dots around them
+  phagocytes.forEach(ph => {
+    if (!ph.alive) return;
+    ctx.save();
+    ctx.translate(m2px(ph.x), m2px(ph.y));
+
+    // Spawn ring
+    if (ph.spawnAnim > 0) {
+      ctx.strokeStyle = `rgba(216,90,48,${ph.spawnAnim})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, m2px(0.6 + (1 - ph.spawnAnim) * 0.8), 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // Amoeboid body
+    ctx.fillStyle = 'rgba(216,90,48,0.25)';
+    ctx.strokeStyle = 'rgba(216,90,48,0.75)';
+    ctx.shadowColor = '#D85A30'; ctx.shadowBlur = 6;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const pts = ph.shape;
+    ctx.moveTo(m2px(pts[0].r) * Math.cos(pts[0].a), m2px(pts[0].r) * Math.sin(pts[0].a));
+    for (let i = 1; i <= pts.length; i++) {
+      const curr = pts[i % pts.length];
+      const cx = m2px(curr.r) * Math.cos(curr.a);
+      const cy = m2px(curr.r) * Math.sin(curr.a);
+      ctx.quadraticCurveTo(cx * 1.1, cy * 1.1, cx, cy);
+    }
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Nucleus (dumbbell-like)
+    ctx.fillStyle = 'rgba(120,40,80,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(m2px(0.05), m2px(-0.03), m2px(0.12), m2px(0.08), 0.3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.ellipse(m2px(-0.08), m2px(0.05), m2px(0.1), m2px(0.07), -0.4, 0, Math.PI*2);
+    ctx.fill();
+
+    // Engulfment granules
+    for (let i = 0; i < ph.engulfed; i++) {
+      const ang = (i / 5) * Math.PI * 2;
+      ctx.fillStyle = 'rgba(60,40,20,0.5)';
+      ctx.beginPath();
+      ctx.arc(m2px(Math.cos(ang) * 0.15), m2px(Math.sin(ang) * 0.15), m2px(0.05), 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // 3-student cluster markers (orbit around phagocyte)
+    for (let i = 0; i < 3; i++) {
+      const ang = (i / 3) * Math.PI * 2 + tick * 0.008;
+      const r = 0.55;
+      const sx = m2px(Math.cos(ang) * r);
+      const sy = m2px(Math.sin(ang) * r);
+      ctx.fillStyle = 'rgba(255,200,120,0.8)';
+      ctx.shadowColor = '#FFD48E'; ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.max(2, SCALE * 0.05), 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Count label
+    ctx.fillStyle = 'rgba(233,196,106,0.75)';
+    ctx.font = `600 ${Math.max(8, SCALE * 0.16)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${ph.engulfed}/5`, 0, m2px(0.78));
+
+    ctx.restore();
+  });
+
+  // B-cells
+  bcells.forEach(bc => {
+    ctx.save();
+    ctx.translate(m2px(bc.x), m2px(bc.y));
+
+    // Antigen Signal Node marker (dwell zone)
+    ctx.strokeStyle = 'rgba(74,144,217,0.25)';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, m2px(0.5), 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Spawn ring
+    if (bc.spawnAnim > 0) {
+      ctx.strokeStyle = `rgba(74,144,217,${bc.spawnAnim})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, m2px(0.4 + (1 - bc.spawnAnim) * 0.6), 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(74,144,217,0.22)';
+    ctx.strokeStyle = 'rgba(74,144,217,0.75)';
+    ctx.shadowColor = '#4A90D9'; ctx.shadowBlur = 6;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, m2px(0.35), 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(20,50,100,0.5)';
+    ctx.beginPath();
+    ctx.arc(0, 0, m2px(0.15), 0, Math.PI*2);
+    ctx.fill();
+
+    // Single student marker
+    ctx.fillStyle = 'rgba(170,210,255,0.9)';
+    ctx.shadowColor = '#aad2ff'; ctx.shadowBlur = 3;
+    ctx.beginPath();
+    ctx.arc(0, m2px(0.45), Math.max(2, SCALE * 0.045), 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(133,183,235,0.7)';
+    ctx.font = `600 ${Math.max(7, SCALE * 0.14)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('B', 0, m2px(0.04));
+    ctx.restore();
+  });
+
+  // T-cells
+  tcells.forEach(tc => {
+    ctx.save();
+    ctx.translate(m2px(tc.x), m2px(tc.y));
+
+    // Spawn ring
+    if (tc.spawnAnim > 0) {
+      ctx.strokeStyle = `rgba(139,123,216,${tc.spawnAnim})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, m2px(0.35 + (1 - tc.spawnAnim) * 0.6), 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(139,123,216,0.22)';
+    ctx.strokeStyle = 'rgba(139,123,216,0.75)';
+    ctx.shadowColor = '#8B7BD8'; ctx.shadowBlur = 5;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, m2px(0.28), 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(50,30,80,0.5)';
+    ctx.beginPath();
+    ctx.arc(0, 0, m2px(0.12), 0, Math.PI*2);
+    ctx.fill();
+
+    // Single student marker
+    ctx.fillStyle = 'rgba(210,200,255,0.9)';
+    ctx.shadowColor = '#d2c8ff'; ctx.shadowBlur = 3;
+    ctx.beginPath();
+    ctx.arc(0, m2px(0.38), Math.max(2, SCALE * 0.045), 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Kill beam
+    if (tc.killing) {
+      ctx.strokeStyle = 'rgba(175,169,236,0.6)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(m2px(tc.killing.x - tc.x), m2px(tc.killing.y - tc.y));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Perforin dots traveling to target
+      for (let i = 0; i < 3; i++) {
+        const t = ((tc.killTimer + i * 30) % 100) / 100;
+        const px = m2px((tc.killing.x - tc.x) * t);
+        const py = m2px((tc.killing.y - tc.y) * t);
+        ctx.fillStyle = 'rgba(200,180,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI*2);
+        ctx.fill();
+      }
+      // Dwell progress ring
+      ctx.strokeStyle = 'rgba(175,169,236,0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, m2px(0.4), -Math.PI/2, -Math.PI/2 + (tc.killTimer/100) * Math.PI*2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(175,169,236,0.7)';
+    ctx.font = `600 ${Math.max(7, SCALE * 0.14)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('T', 0, m2px(0.04));
+    ctx.restore();
+  });
+
+  // Particles
+  particles.forEach(p => {
+    const alpha = Math.max(0, p.life / 60);
+    ctx.fillStyle = p.color + Math.floor(alpha * 120).toString(16).padStart(2, '0');
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      const prx = (Math.sin(i + p.life) * 0.3);
+      const pry = (Math.cos(i + p.life) * 0.3);
+      ctx.arc(m2px(p.x + prx), m2px(p.y + pry), 2.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  });
+
+  // Zone labels
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.font = `600 ${Math.max(8, SCALE * 0.14)}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '2px';
+  ctx.fillText('LEFT CAPILLARY', CW/2, m2px(0.4));
+  ctx.fillText('RIGHT CAPILLARY', CW/2, m2px(8.7));
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.font = `300 ${Math.max(10, SCALE * 0.28)}px Arial`;
+  ctx.fillText('INFECTED TISSUE', CW/2, m2px(4.55));
+}
+
+// ============================================================
+// LOOP
+// ============================================================
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Replay button
+document.getElementById('replayBtn').addEventListener('click', () => {
+  init();
+});
+
+init();
+loop();
+</script>
+</body>
+</html>
