@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VISIO — Immune Frontier Wall Display</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050d1e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    color: #e8ecf5;
+    overflow: hidden;
+  }
+  .stage {
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2vw;
+  }
+  .screen {
+    width: 100%; max-width: 177.77vh;
+    aspect-ratio: 16 / 9;
+    background: #0b1d3d;
+    border-radius: 1.2vh;
+    padding: 2.5vh 3vh;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 1.6vh;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Subtle scanline overlay for projection feel */
+  .screen::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0) 0,
+      rgba(255,255,255,0) 2px,
+      rgba(255,255,255,0.012) 2px,
+      rgba(255,255,255,0.012) 3px
+    );
+    pointer-events: none;
+  }
+  .title {
+    text-align: center;
+    font-size: 2.6vh;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #fff;
+    text-transform: uppercase;
+  }
+  .heal-wrap {
+    border: 2px solid rgba(255,255,255,0.22);
+    border-radius: 0.8vh;
+    padding: 0.8vh;
+  }
+  .heal-bar {
+    height: 5.5vh;
+    background: rgba(255,255,255,0.04);
+    border-radius: 0.4vh;
+    position: relative; overflow: hidden;
+  }
+  .heal-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 15%;
+    background: linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
+    transition: width 0.8s cubic-bezier(.34, 1.26, .64, 1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+  }
+  .heal-pct {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3.4vh; font-weight: 600;
+    color: #fff; z-index: 2;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 8px rgba(0,0,0,0.4);
+  }
+  .heal-label {
+    text-align: center;
+    font-size: 1.8vh;
+    color: rgba(255,255,255,0.7);
+    margin-top: 0.5vh;
+    letter-spacing: 0.02em;
+  }
+  .body {
+    display: grid;
+    grid-template-columns: 22% 1fr 22%;
+    gap: 1.4vh;
+    min-height: 0;
+  }
+  .panel {
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 0.8vh;
+    padding: 1.4vh;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255,255,255,0.015);
+  }
+  .roster {
+    display: flex; flex-direction: column;
+    justify-content: space-around;
+    gap: 1vh;
+  }
+  .roster-group { display: flex; flex-direction: column; gap: 0.4vh; }
+  .cell-grid {
+    display: flex; flex-wrap: wrap;
+    gap: 0.4vh;
+  }
+  .cell {
+    width: 3.2vh; height: 3.2vh;
+    animation: cellFloat 3s ease-in-out infinite;
+  }
+  .cell svg { width: 100%; height: 100%; display: block; }
+  .roster-label {
+    font-size: 1.7vh;
+    color: rgba(255,255,255,0.78);
+    letter-spacing: 0.02em;
+  }
+  .roster-label strong {
+    color: #fff;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+  }
+  .live {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: stretch;
+    padding: 1vh;
+  }
+  .live-view {
+    flex: 1; width: 100%;
+    position: relative;
+  }
+  .live-view svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .live-label {
+    font-size: 1.9vh;
+    color: rgba(255,255,255,0.68);
+    margin-top: 0.8vh;
+    letter-spacing: 0.04em;
+  }
+  .threats {
+    display: flex; flex-direction: column;
+    justify-content: space-around;
+    gap: 1vh;
+  }
+  .threat-label {
+    font-size: 2vh;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+  .threat-value {
+    font-size: 5.2vh;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    display: inline-block;
+  }
+  .threat-pathogen .threat-label,
+  .threat-pathogen .threat-value { color: #f87171; }
+  .threat-toxin .threat-label,
+  .threat-toxin .threat-value { color: #c084fc; }
+  .threat-infected .threat-label,
+  .threat-infected .threat-value { color: #fb923c; }
+  .status {
+    text-align: center;
+    font-size: 2.1vh;
+    color: #e8ecf5;
+    padding: 1.2vh;
+    border: 1.5px solid rgba(255,255,255,0.18);
+    border-radius: 0.8vh;
+    transition: opacity 0.4s;
+    letter-spacing: 0.01em;
+  }
+  .pop {
+    animation: pop 0.5s ease-out;
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.28); filter: brightness(1.4); }
+    100% { transform: scale(1); }
+  }
+  @keyframes cellFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-0.4vh) scale(1.04); }
+  }
+  .live-dot {
+    display: inline-block;
+    width: 1.2vh; height: 1.2vh;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+    animation: blink 1.4s ease-in-out infinite;
+    vertical-align: middle;
+    margin-right: 1vh;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+  #phago-center {
+    transform-origin: 100px 60px;
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="screen">
+    <div class="title"><span class="live-dot"></span>Wall Display — VISIO Immune Frontier</div>
+
+    <div class="heal-wrap">
+      <div class="heal-bar">
+        <div class="heal-fill" id="heal-fill"></div>
+        <div class="heal-pct" id="heal-pct">15%</div>
+      </div>
+      <div class="heal-label">Tissue Healing Progress</div>
+    </div>
+
+    <div class="body">
+      <div class="panel roster">
+        <div class="roster-group">
+          <div class="cell-grid" id="phago-grid"></div>
+          <div class="roster-label">Phagocytes: <strong id="phago-n">4</strong></div>
+        </div>
+        <div class="roster-group">
+          <div class="cell-grid" id="bcell-grid"></div>
+          <div class="roster-label">B-Cells: <strong id="bcell-n">7</strong></div>
+        </div>
+        <div class="roster-group">
+          <div class="cell-grid" id="tcell-grid"></div>
+          <div class="roster-label">T-Cells: <strong id="tcell-n">6</strong></div>
+        </div>
+      </div>
+
+      <div class="panel live">
+        <div class="live-view">
+          <svg id="live-svg" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <radialGradient id="phagoGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fbbf77" />
+                <stop offset="60%" stop-color="#fb923c" />
+                <stop offset="100%" stop-color="#ea580c" />
+              </radialGradient>
+              <radialGradient id="ambientGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#fb923c" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="100" cy="60" r="45" fill="url(#ambientGlow)"/>
+            <g transform="translate(100 60)">
+              <g id="phago-center">
+                <animateTransform attributeName="transform" type="scale" values="1;1.07;1" dur="2.8s" repeatCount="indefinite"/>
+                <path d="M -22 -19 Q -30 -6, -23 11 Q -18 22, -4 23 Q 13 25, 24 15 Q 30 4, 23 -12 Q 16 -22, 0 -22 Q -15 -22, -22 -19 Z" fill="url(#phagoGrad)"/>
+                <circle cx="9" cy="-7" r="5.5" fill="#c2410c" opacity="0.55"/>
+                <circle cx="-9" cy="9" r="3.5" fill="#c2410c" opacity="0.45"/>
+                <circle cx="-4" cy="-4" r="1.5" fill="#fef3c7" opacity="0.7"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="live-label">Live Action View</div>
+      </div>
+
+      <div class="panel threats">
+        <div class="threat-pathogen">
+          <div class="threat-label">Pathogens</div>
+          <div class="threat-value" id="pathogen-n">18</div>
+        </div>
+        <div class="threat-toxin">
+          <div class="threat-label">Toxins</div>
+          <div class="threat-value" id="toxin-n">8</div>
+        </div>
+        <div class="threat-infected">
+          <div class="threat-label">Infected Cells</div>
+          <div class="threat-value" id="infected-n">5</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status" id="status">Innate response engaging — phagocytes deployed</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Cell icon templates
+  const phagoSVG = `
+    <svg viewBox="0 0 40 40">
+      <path d="M 8 13 Q 4 22, 10 30 Q 18 36, 28 33 Q 36 27, 34 17 Q 30 7, 20 6 Q 10 6, 8 13 Z" fill="#fb923c"/>
+      <circle cx="25" cy="17" r="4" fill="#c2410c" opacity="0.7"/>
+      <circle cx="14" cy="24" r="2.5" fill="#c2410c" opacity="0.5"/>
+    </svg>`;
+  const bcellSVG = `
+    <svg viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="14" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2.5"/>
+      <circle cx="20" cy="20" r="7" fill="#60a5fa" opacity="0.55"/>
+      <circle cx="17" cy="17" r="1.5" fill="#dbeafe" opacity="0.8"/>
+    </svg>`;
+  const tcellSVG = `
+    <svg viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="14" fill="#a855f7" stroke="#7c3aed" stroke-width="2.5"/>
+      <circle cx="20" cy="20" r="6" fill="#c084fc" opacity="0.65"/>
+      <circle cx="17" cy="17" r="1.5" fill="#f3e8ff" opacity="0.8"/>
+    </svg>`;
+
+  function fillGrid(id, n, svg) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.style.animationDelay = (i * 0.15) + 's';
+      d.innerHTML = svg;
+      el.appendChild(d);
+    }
+  }
+  fillGrid('phago-grid', 4, phagoSVG);
+  fillGrid('bcell-grid', 7, bcellSVG);
+  fillGrid('tcell-grid', 6, tcellSVG);
+
+  // State
+  const S = {
+    heal: 15,
+    pathogens: 18, toxins: 8, infected: 5,
+    phago: 4, bcell: 7, tcell: 6
+  };
+
+  function pop(id, v) {
+    const el = document.getElementById(id);
+    if (!el || el.textContent === String(v)) return;
+    el.textContent = v;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  }
+
+  // Healing bar — gradually climbs with small fluctuations
+  setInterval(() => {
+    const bias = S.heal < 85 ? 0.75 : 0.45;
+    const delta = (Math.random() < bias ? 1 : -1) * (0.4 + Math.random() * 1.8);
+    S.heal = Math.min(96, Math.max(10, S.heal + delta));
+    document.getElementById('heal-fill').style.width = S.heal + '%';
+    document.getElementById('heal-pct').textContent = Math.round(S.heal) + '%';
+  }, 700);
+
+  // Threat counters drift down, occasionally spawn
+  setInterval(() => {
+    if (Math.random() < 0.68) S.pathogens = Math.max(2, S.pathogens - 1);
+    else if (S.pathogens < 22) S.pathogens += 1;
+    pop('pathogen-n', S.pathogens);
+  }, 1200);
+
+  setInterval(() => {
+    if (Math.random() < 0.55) S.toxins = Math.max(1, S.toxins - 1);
+    else if (S.toxins < 10) S.toxins += 1;
+    pop('toxin-n', S.toxins);
+  }, 1700);
+
+  setInterval(() => {
+    if (Math.random() < 0.6) S.infected = Math.max(0, S.infected - 1);
+    else if (S.infected < 7) S.infected += 1;
+    pop('infected-n', S.infected);
+  }, 2100);
+
+  // Cell counts fluctuate (death & regeneration from bone marrow pool)
+  setInterval(() => {
+    const r = Math.random();
+    if (r < 0.4) {
+      S.phago = Math.max(3, Math.min(6, S.phago + (Math.random() < 0.5 ? -1 : 1)));
+      pop('phago-n', S.phago);
+    } else if (r < 0.75) {
+      S.bcell = Math.max(5, Math.min(9, S.bcell + (Math.random() < 0.5 ? -1 : 1)));
+      pop('bcell-n', S.bcell);
+    } else {
+      S.tcell = Math.max(4, Math.min(7, S.tcell + (Math.random() < 0.5 ? -1 : 1)));
+      pop('tcell-n', S.tcell);
+    }
+  }, 2400);
+
+  // Status message cycle
+  const statuses = [
+    'Innate response engaging — phagocytes deployed',
+    'Phagocytes engulfing pathogens',
+    'Complement proteins tagging invaders',
+    'B-cells releasing antibodies into bloodstream',
+    'Antibodies neutralising toxins',
+    'T-cells crossing capillary walls',
+    'Adaptive immune response activated — all cell types in action',
+    'Infected cells clearing — tissue recovering'
+  ];
+  let si = 0;
+  setInterval(() => {
+    si = (si + 1) % statuses.length;
+    const el = document.getElementById('status');
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = statuses[si];
+      el.style.opacity = '1';
+    }, 350);
+  }, 3500);
+
+  // Live Action View animations
+  const live = document.getElementById('live-svg');
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function spawnPathogen() {
+    const edge = Math.floor(Math.random() * 4);
+    let sx, sy;
+    if (edge === 0) { sx = 20 + Math.random() * 160; sy = -10; }
+    else if (edge === 1) { sx = 210; sy = 10 + Math.random() * 100; }
+    else if (edge === 2) { sx = 20 + Math.random() * 160; sy = 130; }
+    else { sx = -10; sy = 10 + Math.random() * 100; }
+
+    const ang = Math.atan2(60 - sy, 100 - sx) * 180 / Math.PI;
+    const g = document.createElementNS(NS, 'g');
+    const body = document.createElementNS(NS, 'ellipse');
+    body.setAttribute('cx', '0');
+    body.setAttribute('cy', '0');
+    body.setAttribute('rx', '7.5');
+    body.setAttribute('ry', '3.4');
+    body.setAttribute('fill', '#ef4444');
+    g.appendChild(body);
+
+    const flag = document.createElementNS(NS, 'path');
+    flag.setAttribute('d', 'M 7.5 0 Q 12 -3, 14.5 0.5 Q 16.5 2.5, 18.5 -0.5');
+    flag.setAttribute('stroke', '#dc2626');
+    flag.setAttribute('stroke-width', '1.3');
+    flag.setAttribute('fill', 'none');
+    flag.setAttribute('stroke-linecap', 'round');
+    g.appendChild(flag);
+
+    g.setAttribute('transform', `translate(${sx} ${sy}) rotate(${ang})`);
+    live.appendChild(g);
+
+    const dur = 1500 + Math.random() * 500;
+    const t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      if (t < 0.82) {
+        const e = 1 - Math.pow(1 - t / 0.82, 3);
+        const cx = sx + (100 - sx) * e;
+        const cy = sy + (60 - sy) * e;
+        g.setAttribute('transform', `translate(${cx} ${cy}) rotate(${ang})`);
+        requestAnimationFrame(step);
+      } else {
+        const u = (t - 0.82) / 0.18;
+        g.setAttribute('transform', `translate(100 60) rotate(${ang}) scale(${Math.max(0, 1 - u)})`);
+        g.setAttribute('opacity', 1 - u);
+        if (t < 1) requestAnimationFrame(step);
+        else g.remove();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function spawnAntibody() {
+    const sx = -14, sy = 20 + Math.random() * 80;
+    const g = document.createElementNS(NS, 'g');
+    const ab = document.createElementNS(NS, 'path');
+    ab.setAttribute('d', 'M 0 3 L 0 -3 M 0 -3 L -4 -8 M 0 -3 L 4 -8');
+    ab.setAttribute('stroke', '#60a5fa');
+    ab.setAttribute('stroke-width', '1.8');
+    ab.setAttribute('stroke-linecap', 'round');
+    ab.setAttribute('fill', 'none');
+    g.appendChild(ab);
+    g.setAttribute('transform', `translate(${sx} ${sy})`);
+    live.appendChild(g);
+
+    const dur = 2400, t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      const cx = sx + (232 - sx) * t;
+      const cy = sy + Math.sin(t * Math.PI * 2.5) * 6;
+      g.setAttribute('transform', `translate(${cx} ${cy}) rotate(${t * 220})`);
+      g.setAttribute('opacity', t < 0.85 ? 0.78 : (1 - t) * 6);
+      if (t < 1) requestAnimationFrame(step);
+      else g.remove();
+    }
+    requestAnimationFrame(step);
+  }
+
+  function spawnTLaser() {
+    const x1 = 175 + Math.random() * 25;
+    const y1 = 8 + Math.random() * 25;
+    const g = document.createElementNS(NS, 'g');
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', x1);
+    l.setAttribute('y1', y1);
+    l.setAttribute('x2', x1);
+    l.setAttribute('y2', y1);
+    l.setAttribute('stroke', '#a855f7');
+    l.setAttribute('stroke-width', '2.2');
+    l.setAttribute('stroke-linecap', 'round');
+    g.appendChild(l);
+    live.appendChild(g);
+
+    const dur = 500, t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      if (t < 0.4) {
+        const p = t / 0.4;
+        l.setAttribute('x2', x1 + (100 - x1) * p);
+        l.setAttribute('y2', y1 + (60 - y1) * p);
+      } else {
+        l.setAttribute('opacity', 1 - (t - 0.4) / 0.6);
+      }
+      if (t < 1) requestAnimationFrame(step);
+      else g.remove();
+    }
+    requestAnimationFrame(step);
+  }
+
+  setInterval(spawnPathogen, 1100);
+  setInterval(spawnAntibody, 2300);
+  setInterval(spawnTLaser, 3800);
+  setTimeout(spawnPathogen, 200);
+  setTimeout(spawnAntibody, 900);
+  setTimeout(spawnTLaser, 1800);
+})();
+</script>
+</body>
+</html>
